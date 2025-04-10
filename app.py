@@ -55,11 +55,18 @@ def handle_app_mention(event, say):
         """
 
         # Run the agent in a new event loop
+        typing_message = say(text="Bot is typing...", thread_ts=thread_ts)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             response = loop.run_until_complete(ai_agent.run(prompt))
-            say(text=response, thread_ts=thread_ts)
+            # say(text=response, thread_ts=thread_ts)
+            app.client.chat_update(
+                            channel=event["channel"],
+                            ts=typing_message["ts"],  # Timestamp of the "typing" message
+                            text=response,
+                            thread_ts=thread_ts
+                        )
         finally:
             loop.close()
             
