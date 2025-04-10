@@ -64,7 +64,7 @@ class MCPAgentRunner:
         self.answer_parser = PydanticOutputParser(pydantic_object=CauTrucCauTraLoi)
     
     def create_system_prompt(self):
-        template = """Bạn là một botai hỗ trợ trong Slack, hãy trả lời câu hỏi của người dùng.
+        template = """Bạn là một Botai hỗ trợ trong Slack, hãy trả lời tin nhắn gần nhất mà có nhắc đến bạn.
         Hãy phân tích yêu cầu người dùng và quyết định xem có cần sử dụng đến tool không. Tôi cũng sẽ cung cấp lịch sử chat để bạn dùng nếu cần.
         {input}
         {format_instructions}        
@@ -94,7 +94,8 @@ class MCPAgentRunner:
                     agent_executor = AgentExecutor(agent=agent, tools=tools)
                     logger.info("Agent initialized successfully")
                     response = await agent_executor.ainvoke({"input": messages, "format_instructions": self.answer_parser.get_format_instructions()})
-                    return response.get("output", "Xin lỗi, tôi không thể xử lý yêu cầu này.")
+                    output = response.get("output", "Xin lỗi, tôi không thể xử lý yêu cầu này.")
+                    return self.answer_parser.parse(output).cau_tra_loi
 
         except Exception as e:
             logger.error(f"Error running agent: {str(e)}")

@@ -37,7 +37,7 @@ class TomTatThreadTool(BaseTool):
         """
         try:
             logger.info("Sử dụng tool tom_tat_thread")
-            prompt = f"""Hãy tóm tắt thread sau: \n{thread}"""
+            prompt = f"""Tóm tắt cuộc hội thoại sau trong Slack. Chỉ nêu các ý chính liên quan đến công việc, bao gồm các quyết định được đưa ra, các hành động cần thực hiện, ai chịu trách nhiệm và các mốc thời gian (nếu có). Bỏ qua các đoạn trò chuyện xã giao hoặc không liên quan. Trình bày ngắn gọn, rõ ràng dưới dạng gạch đầu dòng: \n{thread}"""
             
             response = await self.model.ainvoke(prompt)
             return response.content
