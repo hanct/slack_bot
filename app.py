@@ -45,15 +45,28 @@ def handle_app_mention(event, say):
         # Get thread history
         response = channel_social.get_thread_history(thread_ts)
         history = ""
-        for message in response:
+        latest_message = response[-1]["text"]
+        for message in response[:-1]:
             history += message["user"] + ": " + message["text"] + "\n"
+        
+        prompt = f"""
+        Lịch sử chat trong thread: {history}
+        Tin nhắn gần nhất: {latest_message}
+        """
 
         # Run the agent in a new event loop
+        typing_message = say(text="Bot is typing...", thread_ts=thread_ts)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(ai_agent.run(history))
-            say(text=response, thread_ts=thread_ts)
+            response = loop.run_until_complete(ai_agent.run(prompt))
+            # say(text=response, thread_ts=thread_ts)
+            app.client.chat_update(
+                            channel=event["channel"],
+                            ts=typing_message["ts"],  # Timestamp of the "typing" message
+                            text=response,
+                            thread_ts=thread_ts
+                        )
         finally:
             loop.close()
             
