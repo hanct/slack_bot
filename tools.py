@@ -17,7 +17,7 @@ class TomTatThreadInput(BaseModel):
     thread: str = Field(description="Nội dung thread cần tóm tắt")
 
 class TomTatThreadTool(BaseTool):
-    """Tool giúp tóm tắt thread"""
+    """Tool giúp tóm tắt thread, chỉ dùng khi được yêu cầu tóm tắt thread"""
     name: ClassVar[str] = "tom_tat_thread"
     description: ClassVar[str] = "Sử dụng để tóm tắt thread"
     model: ChatOpenAI = Field(description="Mô hình ngôn ngữ sử dụng cho việc tóm tắt thread")

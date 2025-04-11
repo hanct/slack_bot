@@ -64,10 +64,10 @@ class MCPAgentRunner:
         self.answer_parser = PydanticOutputParser(pydantic_object=CauTrucCauTraLoi)
     
     def create_system_prompt(self):
-        template = """Bạn là một Botai hỗ trợ trong Slack, hãy trả lời tin nhắn gần nhất mà có nhắc đến bạn.
-        Hãy phân tích yêu cầu người dùng và quyết định xem có cần sử dụng đến tool không. Tôi cũng sẽ cung cấp lịch sử chat để bạn dùng nếu cần.
+        template = """Bạn là BotAI hỗ trợ trong Slack, hãy trả lời tin nhắn của người dùng. Hãy phân tích yêu cầu người dùng trước và quyết định xem có cần sử dụng đến tool không, không sử dụng tool nếu không thực sự cần. 
         {input}
         {format_instructions}        
+        Hãy format câu trả lời để hiển thị đẹp trong Slack.
         {agent_scratchpad}
         """
         return PromptTemplate.from_template(template)
