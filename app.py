@@ -1,9 +1,7 @@
 import os
 import asyncio
+import json
 import logging
-from typing import Any, Dict
-
-# The default is the aiohttp based implementation
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_bolt import App
 from slack_channel_history import SlackChannelHistory
@@ -31,6 +29,10 @@ app = App(
 ai_agent = MCPAgentRunner()
 channel_social = SlackChannelHistory("social")
 
+# Load users list from file
+with open("users.json", "r") as f:
+    users_store = json.load(f)
+
 @app.event("app_mention")
 def handle_app_mention(event, say):
     """Handle app mention events in Slack.
@@ -44,18 +46,23 @@ def handle_app_mention(event, say):
         
         # Get thread history
         response = channel_social.get_thread_history(thread_ts)
-        history = ""
-        latest_message = response[-1]["text"]
-        for message in response[:-1]:
-            history += message["user"] + ": " + message["text"] + "\n"
-        
+        chat_history = ""
+        for message in response:
+            # Replace any user id in message["text"] with user name
+            message_text = message["text"]
+            for user_id, user_name in users_store.items():
+                message_text = message_text.replace(user_id, user_name)
+            
+            chat_history += users_store[message["user"]] + ": " + message_text + "\n"
+
         prompt = f"""
-        Lịch sử chat trong thread: {history}
-        Tin nhắn gần nhất: {latest_message}
+        Đoạn hội thoại: {chat_history}
         """
 
-        # Run the agent in a new event loop
+        # Send a typing message to the channel
         typing_message = say(text="Bot is typing...", thread_ts=thread_ts)
+
+        # Run the agent in a new event loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
