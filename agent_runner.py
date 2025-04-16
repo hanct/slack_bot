@@ -64,7 +64,17 @@ class MCPAgentRunner:
         self.answer_parser = PydanticOutputParser(pydantic_object=CauTrucCauTraLoi)
     
     def create_system_prompt(self):
-        template = """Bạn là BotAI hỗ trợ trong Slack, hãy trả lời tin nhắn của người dùng. Hãy phân tích yêu cầu người dùng trước và quyết định xem có cần sử dụng đến tool không, không sử dụng tool nếu không thực sự cần. 
+        template = """Bạn là BotAI hỗ trợ trong Slack cho một dự án, bạn có thể truy cập vào dữ liệu cũng như toàn bộ lịch sử trò chuyện, hãy trả lời tin nhắn của người dùng. Hãy phân tích yêu cầu người dùng trước và quyết định xem có cần sử dụng đến tool không, không sử dụng tool nếu không thực sự cần.
+        Các trường hợp cần sử dụng tool:
+        - Câu hỏi về thông tin về dự án
+        - Câu hỏi về thông tin về người tham gia dự án
+        - Câu hỏi về thông tin về công việc của người tham gia dự án
+        - Câu hỏi về thông tin về vấn đề đã xảy ra trong dự án
+        - Câu hỏi về thông tin về các tài liệu liên quan trong dự án
+        - Tóm tắt thread
+        Nếu có dùng tool, hãy đưa ra link đến tin nhắn cũ được nói về vấn đề đó.
+        Nếu dùng tool nhưng không có kết quả hoặc kết quả không liên quan đến câu hỏi, hãy nói rằng bạn không biết.
+
         {input}
         {format_instructions}        
         Hãy format câu trả lời để hiển thị đẹp trong Slack.
@@ -105,7 +115,7 @@ def main() -> None:
     """Main function to demonstrate the MCPAgentRunner usage."""
     try:
         runner = MCPAgentRunner()
-        answer = asyncio.run(runner.run("""Tóm tắt thread"""))
+        answer = asyncio.run(runner.run("""Teamlead dự án này là ai @botAI?"""))
         print(answer)
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")

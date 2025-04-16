@@ -61,5 +61,13 @@ class SlackChannelHistory:
         except SlackApiError as e:
             logging.error(f"Error fetching channel ID: {e}")
             return ""
+        
+    def get_permalink(self, message_ts: str) -> str:
+        try:
+            response = self.client.chat_getPermalink(channel=self.channel_id, message_ts=message_ts)
+            return response['permalink']
+        except SlackApiError as e:
+            logging.error(f"Error fetching permalink: {e}")
+            return ""
 
 

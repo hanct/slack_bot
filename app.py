@@ -5,7 +5,7 @@ import logging
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_bolt import App
 from slack_channel_history import SlackChannelHistory
-from ai_agent import MCPAgentRunner
+from agent_runner import MCPAgentRunner
 
 # Configure logging
 logging.basicConfig(

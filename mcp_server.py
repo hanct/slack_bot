@@ -1,6 +1,8 @@
 from mcp.server.fastmcp import FastMCP
+from retrieval import retrieve
+from langchain_core.documents import Document
 
-# Create an MCP server
+
 mcp = FastMCP()
 
 #### Tools ####
@@ -9,6 +11,21 @@ mcp = FastMCP()
 def add_two_numbers(a: int, b: int) -> int:
     """Add two numbers"""
     return a + b
+
+@mcp.tool()
+def retrieve_related_docs(query: str, k: int = 1) -> list[Document]:
+    """Tìm kiếm các tài liệu liên quan từ cơ sở dữ liệu vector
+    
+    Args:
+        query: Câu truy vấn để tìm kiếm các tài liệu liên quan
+        k: Số lượng tài liệu cần trích xuất
+        
+    Returns:
+        Nội dung của các tài liệu liên quan
+    """
+    docs = retrieve(query, k = k)
+
+    return docs
 
 # More tools can be added here
 
