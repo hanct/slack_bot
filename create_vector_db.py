@@ -1,6 +1,7 @@
 import os
 import dotenv
 import json
+import logging
 from datetime import datetime
 from typing import List, Dict
 
@@ -9,6 +10,9 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 from langchain_experimental.text_splitter import SemanticChunker
 from slack_channel_history import SlackChannelHistory
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class SlackVectorDB:
@@ -92,21 +96,23 @@ class SlackVectorDB:
         Returns:
             List of Document objects
         """
-        # Skip processing if thread_history is empty or too short
-        if not thread_history:
+        # Skip processing if thread_history is empty or only whitespace
+        if not thread_history or not thread_history.strip():
+            logger.warning(f"Warning: Empty thread history received. Metadata: {metadata}")
             return []
             
         try:
+            # Filter out None values from metadata
             documents = self.text_splitter.create_documents([thread_history], [metadata])
             return documents
         except Exception as e:
-            print(f"Error creating documents: {e}")
-            # If semantic chunking fails, fall back to simple document creation
+            logger.error(f"Error creating documents: {e}")
             return [Document(page_content=thread_history, metadata=metadata)]
     
     def process_channel_history(self, batch_size: int = 100):
         """Process the channel history and add to vector store in batches."""
         channel_history = self.slack_channel_history.get_channel_history()
+        logger.info(f"Found {len(channel_history)} messages in channel history")
         documents_to_add = []
         latest_ts = self.last_processed_ts
         
@@ -136,35 +142,40 @@ class SlackVectorDB:
                 "permalink_to_message": permalink,
                 "channel": self.channel_name,
                 "message_ts": message["ts"],
-                "thread_ts": thread_ts,
+                "thread_ts": thread_ts if thread_ts else "",
                 "user": self.users_store[message["user"]],
                 "message_type": "thread" if thread_ts else "main"
             }
             
             # Create and add documents to batch
             documents = self.create_documents(thread_history, metadata)
-            documents_to_add.extend(documents)
+            if documents:
+                logger.info(f"Created {len(documents)} documents from message {message['ts']}")
+                documents_to_add.extend(documents)
 
             # Process in batches
             if len(documents_to_add) >= batch_size:
                 try:
                     self.vector_store.add_documents(documents_to_add)
+                    logger.info(f"Added {len(documents_to_add)} documents to vector store")
                     documents_to_add = []
                 except Exception as e:
-                    print(f"Error adding documents: {e}")
+                    logger.error(f"Error adding documents: {e}")
                     # Retry logic could be added here
         
         # Process remaining documents
         if documents_to_add:
             try:
                 self.vector_store.add_documents(documents_to_add)
+                logger.info(f"Added final batch of {len(documents_to_add)} documents to vector store")
             except Exception as e:
-                print(f"Error adding final documents: {e}")
+                logger.error(f"Error adding final documents: {e}")
         
         # Update last processed timestamp
         if latest_ts > self.last_processed_ts:
             self._save_last_processed_ts(latest_ts)
             self.last_processed_ts = latest_ts
+            print(f"Updated last processed timestamp to {latest_ts}")
 
 # Example usage
 if __name__ == "__main__":
