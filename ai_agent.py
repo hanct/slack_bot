@@ -1,48 +1,116 @@
 import os
-from typing import Annotated
+import asyncio
+from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 
-from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, END, START, MessagesState
+from langgraph.prebuilt import ToolNode
 
-from langgraph.graph import StateGraph, END, START
-from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate
+from langchain_core.messages import AIMessage
+from langchain_mcp_adapters.tools import load_mcp_tools
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 
-class State(TypedDict):
-    messages: Annotated[list, add_messages]
 
+class Answer(BaseModel):
+    analysis: str = Field(description="Analysis before answering")
+    answer: str = Field(description="Final answer")
 
+answer_parser = PydanticOutputParser(pydantic_object=Answer)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=os.getenv("OPENAI_API_KEY"))
 
-def create_tool_calling_agent(tools, prompt):
-    llm_with_tools = llm.bind_tools(tools)
+
+def get_system_prompt():
+    system_prompt = """
+    You are a BotAI assistant in Slack for a project. Use the following tools to answer user's question:
+    - add_two_numbers: Add two numbers
+    - retrieve_related_docs: Retrieve related documents to a query
+
+    Format instructions: {format_instructions}
+    Conversation: {conversation}
+    """
+
+    system_prompt += "\nYou should always answer in same language as user's ask."
+
+    return system_prompt
+
+def create_chatbot(tools):
+    prompt = ChatPromptTemplate.from_messages([
+        SystemMessagePromptTemplate.from_template(get_system_prompt()),
+    ])
+    llm_with_tools = llm.bind_tools(tools=tools)
+    chain = prompt | llm_with_tools
+
+    def chatbot(state: MessagesState):
+        # Ensure messages are in the right format
+        if isinstance(state["messages"], str):
+            from langchain_core.messages import HumanMessage
+            messages = [HumanMessage(content=state["messages"])]
+        else:
+            messages = state["messages"]
+
+        response = chain.invoke({"conversation": messages, "format_instructions": answer_parser.get_format_instructions()})
+
+        return {"messages": messages + [response]}
+
+    return chatbot
+
+
+def router(state):
+    messages = state["messages"]
+    last_message = messages[-1]
     
-    def supervisor(state: State):
-        message = llm_with_tools.invoke(state["messages"])
-        return {"messages": [message]}
+    has_tool_calls = False
+    if isinstance(last_message, AIMessage):
+        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+            has_tool_calls = True
+        elif hasattr(last_message, "additional_kwargs") and last_message.additional_kwargs.get("tool_calls"):
+            has_tool_calls = True
+    
+    return "tools" if has_tool_calls else "end"
 
-    graph_builder = StateGraph(State)
-    graph_builder.add_node("supervisor", supervisor)
-    tool_node = ToolNode(tools=tools)
-    graph_builder.add_node("tools", tool_node)
-    graph_builder.add_conditional_edges(
-        "supervisor",
-        tools_condition,
-    )
+@asynccontextmanager
+async def create_agent():
+    async with sse_client(url="http://localhost:8000/sse") as streams:
+        async with ClientSession(*streams) as session:
+            await session.initialize()
+            
+            tools = await load_mcp_tools(session)
+            graph_builder = StateGraph(MessagesState)
+            tool_node = ToolNode(tools)
 
-    graph_builder.add_edge(START, "supervisor")
-    graph_builder.add_edge("tools", END)
+            chatbot_node = create_chatbot(tools)
+            graph_builder.add_node("chatbot", chatbot_node)
+            graph_builder.add_node("tools", tool_node)
 
-    return graph_builder.compile()
+            graph_builder.add_edge(START, "chatbot")
+            graph_builder.add_conditional_edges(
+                "chatbot",
+                router,
+                {
+                    "tools": "tools",
+                    "end": END
+                }
+            )
+            graph_builder.add_edge("tools", "chatbot")
+            graph = graph_builder.compile()
+            
+            try:
+                yield graph
+            finally:
+                pass
 
 
-from IPython.display import Image, display
+async def main():
+    
+    async with create_agent() as agent:
+        result = await agent.ainvoke({"messages": "what's 123123123+2143125?"})
+        # Get only the answer from the result
+        answer = answer_parser.parse(result["messages"][-1].content)
+        print(answer.answer)
 
-try:
-    graph = create_tool_calling_agent([], "")
-    # Save the diagram to a file
-    graph.get_graph().draw_mermaid_png(output_file_path="agent_graph.png")
-    print("Diagram saved as agent_graph.png")
-except Exception as e:
-    # This requires some extra dependencies and is optional
-    print(f"Error generating diagram: {e}")
+if __name__ == "__main__":
+    asyncio.run(main())
