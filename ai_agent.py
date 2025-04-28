@@ -1,11 +1,12 @@
 import os
 import asyncio
+from typing import TypedDict, Annotated
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 
-from langgraph.graph import StateGraph, END, START, MessagesState
+from langgraph.graph import StateGraph, END, START
 from langgraph.prebuilt import ToolNode
-
+from langgraph.graph.message import AnyMessage, add_messages
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate
@@ -14,6 +15,9 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
+
+class State(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
 
 class Answer(BaseModel):
     analysis: str = Field(description="Analysis before answering")
@@ -44,7 +48,7 @@ def create_chatbot(tools):
     llm_with_tools = llm.bind_tools(tools=tools)
     chain = prompt | llm_with_tools
 
-    def chatbot(state: MessagesState):
+    def chatbot(state: State):
         # Ensure messages are in the right format
         if isinstance(state["messages"], str):
             from langchain_core.messages import HumanMessage
@@ -79,7 +83,7 @@ async def create_agent():
             await session.initialize()
             
             tools = await load_mcp_tools(session)
-            graph_builder = StateGraph(MessagesState)
+            graph_builder = StateGraph(State)
             tool_node = ToolNode(tools)
 
             chatbot_node = create_chatbot(tools)
