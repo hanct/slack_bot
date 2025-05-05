@@ -7,19 +7,18 @@ A Python-based platform for Slack integration with AI capabilities, providing in
 ```
 mcp/
 ├── src/
-│   └── mcp/
-│       ├── core/           # Core application components
-│       │   ├── app.py
-│       │   └── mcp_server.py
-│       ├── slack/          # Slack integration components
-│       │   ├── get_user_list.py
-│       │   └── slack_channel_history.py
-│       ├── ai/            # AI-related components
-│       │   ├── ai_agent.py
-│       │   └── create_vector_db.py
-│       └── utils/         # Utility functions and helpers
-│           ├── parser.py
-│           └── tools.py
+│    ├── core/           # Core application components
+│    │   ├── app.py
+│    │   └── mcp_server.py
+│    ├── slack/          # Slack integration components
+│    │   ├── get_user_list.py
+│    │   └── slack_channel_history.py
+│    ├── ai/            # AI-related components
+│    │   ├── ai_agent.py
+│    │   └── create_vector_db.py
+│    └── utils/         # Utility functions and helpers
+│        ├── parser.py
+│        └── tools.py
 ├── tests/                 # Test files
 ├── docs/                  # Documentation
 ├── requirements.txt       # Project dependencies
