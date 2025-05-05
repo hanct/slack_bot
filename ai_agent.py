@@ -1,7 +1,6 @@
 import os
 import asyncio
 from typing import TypedDict, Annotated
-from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 
 import langchain
@@ -9,7 +8,6 @@ from langgraph.graph import StateGraph, END, START
 from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import AnyMessage, add_messages
 from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate
 from langchain_core.messages import AIMessage
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -17,20 +15,14 @@ from mcp import ClientSession
 from mcp.client.sse import sse_client
 
 from tools import TomTatThreadTool
-
+from parser import answer_parser
 
 langchain.debug = True
 
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
-class Answer(BaseModel):
-    analysis: str = Field(description="Analysis before answering")
-    answer: str = Field(description="Final answer")
-
-answer_parser = PydanticOutputParser(pydantic_object=Answer)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=os.getenv("OPENAI_API_KEY"))
-
 
 def get_system_prompt():
     system_prompt = """
