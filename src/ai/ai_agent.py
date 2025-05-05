@@ -14,8 +14,8 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
-from tools import TomTatThreadTool
-from parser import answer_parser
+from src.utils.tools import TomTatThreadTool
+from src.utils.parser import answer_parser
 
 langchain.debug = True
 

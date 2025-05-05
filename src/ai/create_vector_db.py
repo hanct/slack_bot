@@ -9,7 +9,7 @@ from langchain_chroma.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 from langchain_experimental.text_splitter import SemanticChunker
-from slack_channel_history import SlackChannelHistory
+from src.slack.slack_channel_history import SlackChannelHistory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
