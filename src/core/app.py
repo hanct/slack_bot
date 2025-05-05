@@ -5,10 +5,10 @@ import asyncio
 
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_bolt.async_app import AsyncApp
-from slack_channel_history import SlackChannelHistory
+from src.slack.slack_channel_history import SlackChannelHistory
 
-from ai_agent import create_agent
-from parser import answer_parser
+from src.ai.ai_agent import create_agent
+from src.utils.parser import answer_parser
 
 # Configure logging
 logging.basicConfig(

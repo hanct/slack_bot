@@ -1,5 +1,5 @@
 from mcp.server.fastmcp import FastMCP
-from retrieval import retrieve
+from ai.retrieval import retrieve
 from langchain_core.documents import Document
 
 
