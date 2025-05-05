@@ -1,4 +1,4 @@
-# MCP (Message Control Platform)
+# SLACK BOT
 
 A Python-based platform for Slack integration with AI capabilities, providing intelligent message processing and response generation.
 
@@ -56,7 +56,7 @@ mcp/
 ## Running the Application
 
 ```bash
-python src/mcp/core/app.py
+python -m src.core.app
 ```
 
 ## Contributing
