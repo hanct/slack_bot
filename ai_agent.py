@@ -4,6 +4,7 @@ from typing import TypedDict, Annotated
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 
+import langchain
 from langgraph.graph import StateGraph, END, START
 from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import AnyMessage, add_messages
@@ -15,6 +16,10 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
+from tools import TomTatThreadTool
+
+
+langchain.debug = True
 
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
@@ -29,10 +34,10 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=os.getenv("OPENAI_A
 
 def get_system_prompt():
     system_prompt = """
-    You are a BotAI assistant in Slack for a project. Use the following tools to answer user's question:
-    - add_two_numbers: Add two numbers
-    - retrieve_related_docs: Retrieve related documents to a query
-
+    You are BotAI - an assistant in Slack for a project. 
+    Below is the conversation in a thread, you need to respond to the last message where you were mentioned (@BotAI).
+    To answer the question, always analyze first to decide if you need to use any tools.
+    Only provide factual information supported by verified sources or clearly indicate when you're unsure. Do not make up names, dates, statistics, or quotes. If you don't know the answer, respond with "I don't know".
     Format instructions: {format_instructions}
     Conversation: {conversation}
     """
@@ -45,7 +50,7 @@ def create_chatbot(tools):
     prompt = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(get_system_prompt()),
     ])
-    llm_with_tools = llm.bind_tools(tools=tools)
+    llm_with_tools = llm.bind_tools(tools=tools, tool_choice="auto")
     chain = prompt | llm_with_tools
 
     def chatbot(state: State):
@@ -67,6 +72,7 @@ def router(state):
     messages = state["messages"]
     last_message = messages[-1]
     
+    # Check for existing tool calls
     has_tool_calls = False
     if isinstance(last_message, AIMessage):
         if hasattr(last_message, "tool_calls") and last_message.tool_calls:
@@ -83,6 +89,7 @@ async def create_agent():
             await session.initialize()
             
             tools = await load_mcp_tools(session)
+            tools.append(TomTatThreadTool(llm))
             graph_builder = StateGraph(State)
             tool_node = ToolNode(tools)
 
@@ -109,12 +116,10 @@ async def create_agent():
 
 
 async def main():
-    
     async with create_agent() as agent:
-        result = await agent.ainvoke({"messages": "what's 123123123+2143125?"})
+        result = await agent.ainvoke({"messages": """@botAI Capital of japan? """})
         # Get only the answer from the result
-        answer = answer_parser.parse(result["messages"][-1].content)
-        print(answer.answer)
+        print(result)
 
 if __name__ == "__main__":
     asyncio.run(main())

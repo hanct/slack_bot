@@ -14,14 +14,14 @@ def add_two_numbers(a: int, b: int) -> int:
 
 @mcp.tool()
 def retrieve_related_docs(query: str, k: int = 1) -> list[Document]:
-    """Tìm kiếm các tài liệu liên quan từ cơ sở dữ liệu vector
+    """Retrieve related documents from the vector database
     
     Args:
-        query: Câu truy vấn để tìm kiếm các tài liệu liên quan
-        k: Số lượng tài liệu cần trích xuất
+        query: Query to retrieve related documents
+        k: Number of documents to retrieve
         
     Returns:
-        Nội dung của các tài liệu liên quan
+        Content of the related documents
     """
     docs = retrieve(query, k = k)
 
@@ -58,6 +58,12 @@ def debug_error(error: str) -> list[tuple]:
         ("assistant", "I'll help debug that. What have you tried so far?"),
     ]
 
+
+def get_tools():
+    # Only include tools that are working
+    base_tools = [add_two_numbers, retrieve_related_docs]
+    
+    return base_tools
 
 if __name__ == "__main__":
     # Initialize and run the server
